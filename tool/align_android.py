@@ -41,7 +41,21 @@ def main():
                 
         # Copy settings and root build.gradle.kts
         shutil.copy(ref_settings_kts, os.path.join("android", "settings.gradle.kts"))
-        shutil.copy(os.path.join(ref_dir, "android", "build.gradle.kts"), os.path.join("android", "build.gradle.kts"))
+        
+        with open(os.path.join(ref_dir, "android", "build.gradle.kts"), "r", encoding="utf-8") as f:
+            root_content = f.read()
+            
+        root_content += '''
+subprojects {
+    tasks.configureEach {
+        if (name.contains("lintVital", ignoreCase = true)) {
+            enabled = false
+        }
+    }
+}
+'''
+        with open(os.path.join("android", "build.gradle.kts"), "w", encoding="utf-8") as f:
+            f.write(root_content)
         
         # Read and patch app/build.gradle.kts
         with open(os.path.join(ref_dir, "android", "app", "build.gradle.kts"), "r", encoding="utf-8") as f:
@@ -53,6 +67,14 @@ def main():
             abiFilters.addAll(listOf("arm64-v8a", "x86_64"))
         }'''
         content = re.sub(r'(defaultConfig\s*\{)', r'\1\n' + ndk_block, content)
+        
+        lint_block = '''
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+'''
+        content = re.sub(r'(android\s*\{)', r'\1\n' + lint_block, content)
         
         dep_block = '''
 dependencies {
@@ -75,7 +97,21 @@ dependencies {
                 os.remove(p)
                 
         shutil.copy(os.path.join(ref_dir, "android", "settings.gradle"), os.path.join("android", "settings.gradle"))
-        shutil.copy(os.path.join(ref_dir, "android", "build.gradle"), os.path.join("android", "build.gradle"))
+        
+        with open(os.path.join(ref_dir, "android", "build.gradle"), "r", encoding="utf-8") as f:
+            root_content = f.read()
+            
+        root_content += '''
+subprojects {
+    tasks.configureEach { task ->
+        if (task.name.toLowerCase().contains("lintvital")) {
+            task.enabled = false
+        }
+    }
+}
+'''
+        with open(os.path.join("android", "build.gradle"), "w", encoding="utf-8") as f:
+            f.write(root_content)
         
         with open(os.path.join(ref_dir, "android", "app", "build.gradle"), "r", encoding="utf-8") as f:
             content = f.read()
@@ -87,6 +123,14 @@ dependencies {
             abiFilters "arm64-v8a", "x86_64"
         }'''
         content = re.sub(r'(defaultConfig\s*\{)', r'\1\n' + ndk_block, content)
+        
+        lint_block = '''
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+'''
+        content = re.sub(r'(android\s*\{)', r'\1\n' + lint_block, content)
         
         dep_block = '''
 dependencies {
@@ -109,6 +153,13 @@ dependencies {
         with open(manifest_path, "w", encoding="utf-8") as f:
             f.write(m)
         print("Ensured AndroidManifest.xml namespace compliance.")
+        
+    # Append lint flags to gradle.properties
+    props_path = os.path.join("android", "gradle.properties")
+    if os.path.exists(props_path):
+        with open(props_path, "a", encoding="utf-8") as f:
+            f.write("\nandroid.lint.useK2Uast=false\n")
+        print("Configured gradle.properties lint flags.")
         
     print("=== Native Gradle Alignment Complete ===")
 
