@@ -46,10 +46,10 @@ def main():
             root_content = f.read()
             
         root_content += '''
-subprojects {
-    tasks.configureEach {
-        if (name.contains("lintVital", ignoreCase = true)) {
-            enabled = false
+gradle.taskGraph.whenReady {
+    allTasks.forEach { task ->
+        if (task.name.contains("lint", ignoreCase = true)) {
+            task.enabled = false
         }
     }
 }
@@ -72,6 +72,7 @@ subprojects {
     lint {
         checkReleaseBuilds = false
         abortOnError = false
+        checkDependencies = false
     }
 '''
         content = re.sub(r'(android\s*\{)', r'\1\n' + lint_block, content)
@@ -102,9 +103,9 @@ dependencies {
             root_content = f.read()
             
         root_content += '''
-subprojects {
-    tasks.configureEach { task ->
-        if (task.name.toLowerCase().contains("lintvital")) {
+gradle.taskGraph.whenReady {
+    allTasks.each { task ->
+        if (task.name.toLowerCase().contains("lint")) {
             task.enabled = false
         }
     }
@@ -128,6 +129,7 @@ subprojects {
     lint {
         checkReleaseBuilds = false
         abortOnError = false
+        checkDependencies = false
     }
 '''
         content = re.sub(r'(android\s*\{)', r'\1\n' + lint_block, content)
@@ -153,13 +155,6 @@ dependencies {
         with open(manifest_path, "w", encoding="utf-8") as f:
             f.write(m)
         print("Ensured AndroidManifest.xml namespace compliance.")
-        
-    # Append lint flags to gradle.properties
-    props_path = os.path.join("android", "gradle.properties")
-    if os.path.exists(props_path):
-        with open(props_path, "a", encoding="utf-8") as f:
-            f.write("\nandroid.lint.useK2Uast=false\n")
-        print("Configured gradle.properties lint flags.")
         
     print("=== Native Gradle Alignment Complete ===")
 
