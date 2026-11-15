@@ -39,6 +39,9 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
+      - name: Patch Native Dependencies
+        run: python3 tool/patch_flutter_llama.py
+
       - name: Analyze Project
         run: flutter analyze || true
 
