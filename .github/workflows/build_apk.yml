@@ -34,85 +34,7 @@ jobs:
         run: yes | flutter doctor --android-licenses || true
 
       - name: Align Native Gradle with Runner Flutter SDK
-        run: |
-          set -e
-          echo "=== Flutter Version ==="
-          flutter --version
-          
-          echo "=== Generating reference project ==="
-          rm -rf /tmp/ref_app
-          flutter create --org com.example.offline_english_tutor --project-name offline_english_tutor /tmp/ref_app
-          
-          # Replace gradle wrapper with the exact official distribution
-          rm -rf android/gradle
-          cp -rf /tmp/ref_app/android/gradle android/
-          
-          # Check whether ref_app uses kts or groovy
-          if [ -f /tmp/ref_app/android/settings.gradle.kts ]; then
-            echo "Runner uses Kotlin DSL (.kts)"
-            rm -f android/settings.gradle android/build.gradle android/app/build.gradle
-            cp /tmp/ref_app/android/settings.gradle.kts android/settings.gradle.kts
-            cp /tmp/ref_app/android/build.gradle.kts android/build.gradle.kts
-            cp /tmp/ref_app/android/app/build.gradle.kts android/app/build.gradle.kts
-            
-            python3 -c "
-import re
-with open('android/app/build.gradle.kts', 'r') as f:
-    content = f.read()
-
-# Replace minSdk
-content = re.sub(r'minSdk\s*=.*', 'minSdk = 24', content)
-
-# Inject ndk abiFilters in defaultConfig
-ndk_block = '''        ndk {
-            abiFilters.addAll(listOf(\"arm64-v8a\", \"x86_64\"))
-        }'''
-content = re.sub(r'(defaultConfig\s*\{)', r'\1\n' + ndk_block, content)
-
-# Inject dependencies
-dep_block = '''dependencies {
-    implementation(\"androidx.appcompat:appcompat:1.7.0\")
-    implementation(\"com.google.mlkit:text-recognition:16.0.1\")
-}'''
-content += '\n' + dep_block + '\n'
-
-with open('android/app/build.gradle.kts', 'w') as f:
-    f.write(content)
-"
-            echo "=== Patched app/build.gradle.kts ==="
-            cat android/app/build.gradle.kts
-          else
-            echo "Runner uses Groovy DSL (.gradle)"
-            rm -f android/settings.gradle.kts android/build.gradle.kts android/app/build.gradle.kts
-            cp /tmp/ref_app/android/settings.gradle android/settings.gradle
-            cp /tmp/ref_app/android/build.gradle android/build.gradle
-            cp /tmp/ref_app/android/app/build.gradle android/app/build.gradle
-            
-            python3 -c "
-import re
-with open('android/app/build.gradle', 'r') as f:
-    content = f.read()
-
-content = re.sub(r'minSdkVersion\s+.*', 'minSdkVersion 24', content)
-content = re.sub(r'minSdk\s+.*', 'minSdk 24', content)
-
-ndk_block = '''        ndk {
-            abiFilters \"arm64-v8a\", \"x86_64\"
-        }'''
-content = re.sub(r'(defaultConfig\s*\{)', r'\1\n' + ndk_block, content)
-
-dep_block = '''dependencies {
-    implementation 'androidx.appcompat:appcompat:1.7.0'
-    implementation 'com.google.mlkit:text-recognition:16.0.1'
-}'''
-content += '\n' + dep_block + '\n'
-
-with open('android/app/build.gradle', 'w') as f:
-    f.write(content)
-"
-            echo "=== Patched app/build.gradle ==="
-            cat android/app/build.gradle
-          fi
+        run: python3 tool/align_android.py
 
       - name: Get Dependencies
         run: flutter pub get
@@ -121,7 +43,7 @@ with open('android/app/build.gradle', 'w') as f:
         run: flutter analyze || true
 
       - name: Build Android Release APK
-        run: flutter build apk --release --verbose --no-tree-shake-icons
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK as Workflow Artifact
         uses: actions/upload-artifact@v4
