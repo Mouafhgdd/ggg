@@ -24,16 +24,14 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Setup Android NDK & CMake
-        run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "ndk;25.1.8937393" "cmake;3.22.1"
-
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
+
+      - name: Accept Android Licenses
+        run: yes | flutter doctor --android-licenses || true
 
       - name: Get Dependencies
         run: flutter pub get
