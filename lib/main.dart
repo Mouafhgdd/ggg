@@ -33,7 +33,7 @@ class OfflineEnglishTutorApp extends StatelessWidget {
           surface: const Color(0xFFF8FAFC),
         ),
         fontFamily: 'Segoe UI',
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -951,7 +951,7 @@ class _TutorHomeScreenState extends State<TutorHomeScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '${_tokensPerSec.toStringAsFixed(1)} token/s',
+                      '${_tokensPerSec.toStringAsFixed(1)} token/s ($_totalTokens tokens)',
                       style: const TextStyle(fontSize: 11, color: Color(0xFF4F46E5)),
                     ),
                   ),
