@@ -100,6 +100,16 @@ dependencies {
             f.write(content)
         print("Created and patched android/app/build.gradle")
         
+    # Ensure AndroidManifest.xml does not have legacy package attribute
+    manifest_path = os.path.join("android", "app", "src", "main", "AndroidManifest.xml")
+    if os.path.exists(manifest_path):
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            m = f.read()
+        m = re.sub(r'\s+package="[^"]*"', '', m)
+        with open(manifest_path, "w", encoding="utf-8") as f:
+            f.write(m)
+        print("Ensured AndroidManifest.xml namespace compliance.")
+        
     print("=== Native Gradle Alignment Complete ===")
 
 if __name__ == "__main__":
