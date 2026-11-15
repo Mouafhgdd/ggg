@@ -79,24 +79,18 @@ class LocalLlmService {
 
     if (currentBackend == LlmBackend.llamaCppDart) {
       _llamaInstance?.dispose();
-      final contextParams = ContextParams();
-      contextParams.context = contextSize;
-      contextParams.threads = threads;
-
-      final modelParams = ModelParams();
-      _llamaInstance = Llama(
-        modelPath,
-        modelParams,
-        contextParams,
-      );
+      _llamaInstance = Llama(modelPath);
     } else {
       // flutter_llama initialization
       try {
-        await fllama.FlutterLlama.init(
+        final llama = fllama.FlutterLlama.instance;
+        final config = fllama.LlamaConfig(
           modelPath: modelPath,
+          nThreads: threads,
           contextSize: contextSize,
-          threads: threads,
+          useGpu: true,
         );
+        await llama.loadModel(config);
       } catch (e) {
         debugPrint('flutter_llama init note: $e');
       }
@@ -118,7 +112,7 @@ class LocalLlmService {
     int tokenCount = 0;
     final DateTime startTime = DateTime.now();
 
-    _currentState = LlmGenerationState(
+    _currentState = const LlmGenerationState(
       isGenerating: true,
       outputText: '',
       tokensPerSecond: 0.0,
@@ -129,11 +123,14 @@ class LocalLlmService {
     try {
       if (currentBackend == LlmBackend.flutterLlama) {
         // Stream using flutter_llama
-        final stream = fllama.FlutterLlama.generateStream(
+        final llama = fllama.FlutterLlama.instance;
+        final params = fllama.GenerationParams(
           prompt: prompt,
           temperature: temperature,
           maxTokens: 2048,
         );
+
+        final stream = llama.generateStream(params);
 
         await for (final token in stream) {
           if (_isCancelled) break;
